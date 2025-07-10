@@ -47,7 +47,9 @@ function setLang(newLang) {
       chips: '買入籌碼',
       sidepot: '邊池',
       max_players: '最少2人，最多21人',
-      error_overbet: '下注金額超過可用籌碼！'
+      error_overbet: '下注金額超過可用籌碼！',
+      current: '本輪',
+      total: '總計'
     },
     'en': {
       title: 'Poker Chip Manager',
@@ -78,7 +80,9 @@ function setLang(newLang) {
       chips: 'Chips',
       sidepot: 'Sidepot',
       max_players: 'Min 2, Max 21',
-      error_overbet: 'Bet exceeds available chips!'
+      error_overbet: 'Bet exceeds available chips!',
+      current: 'Current',
+      total: 'Total'
     }
   };
   
@@ -311,8 +315,8 @@ function updatePlayerElement(playerIndex) {
   playerDiv.innerHTML = `
     <div class="block-player-info${playerIndex === currentPlayer ? ' block-current' : ''}">
       <div class="player-chipinfo-name">${p.name}</div>
-      <div class="player-chipinfo-current">Current: ${p.lastBet || 0}</div>
-      <div class="player-chipinfo-total">Total: ${p.chips}</div>
+      <div class="player-chipinfo-current">${langData.current || 'Current'}: ${p.lastBet || 0}</div>
+      <div class="player-chipinfo-total">${langData.total || 'Total'}: ${p.chips}</div>
       ${p.isBB ? `<span class="player-bb">${langData.bb||'BB'}</span>` : ''}
       ${p.isSB ? `<span class="player-sb">${langData.sb||'SB'}</span>` : ''}
       ${p.status==='sitout'?`<span class="player-sitout">${langData.sit_out||'離席'}</span>`:''}
