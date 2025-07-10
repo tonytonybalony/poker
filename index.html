@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>德州撲克籌碼管理</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="language-switcher">
+    <button data-lang="zh-TW">中文</button>
+    <button data-lang="en">English</button>
+  </div>
+  <main id="poker-table-container">
+    <div id="poker-table">
+      <div id="pot-display">底池：<span id="pot-amount">0</span></div>
+      <div id="players"></div>
+    </div>
+    <div id="controls">
+      <div id="player-actions">
+        <button id="fold-btn">棄牌</button>
+        <button id="check-btn">過牌</button>
+        <button id="call-btn">跟注</button>
+        <button id="bet-btn">下注</button>
+        <button id="raise-btn">加注</button>
+        <button id="allin-btn">All-in</button>
+      </div>
+      <div id="numpad-display" style="text-align:center;font-size:1.5em;margin-bottom:8px;min-height:1.5em;letter-spacing:2px;"></div>
+      <div id="numpad">
+        <div class="numpad-row">
+          <button>1</button><button>2</button><button>3</button>
+        </div>
+        <div class="numpad-row">
+          <button>4</button><button>5</button><button>6</button>
+        </div>
+        <div class="numpad-row">
+          <button>7</button><button>8</button><button>9</button>
+        </div>
+        <div class="numpad-row">
+          <button id="numpad-clear">清除</button><button>0</button><button id="numpad-enter">輸入</button>
+        </div>
+      </div>
+      <div id="game-settings">
+        <button id="undo-btn">回上一步</button>
+        <button id="random-bb-btn">隨機選BB</button>
+        <button id="export-history-btn">匯出歷史</button>
+      </div>
+    </div>
+  </main>
+  <!-- 新增玩家跳出盒子 -->
+  <div id="add-player-modal" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.5);z-index:100;align-items:center;justify-content:center;">
+    <div style="background:#222;padding:32px 24px;border-radius:16px;min-width:320px;box-shadow:0 0 24px #000a;display:flex;flex-direction:column;align-items:center;">
+      <h2 style="color:#ffd700;margin-bottom:16px;">新增玩家</h2>
+      <label style="margin-bottom:8px;width:100%;color:#fff;">玩家名稱
+        <input id="add-player-name" type="text" style="width:100%;padding:6px 8px;margin-top:4px;border-radius:6px;border:none;outline:none;" maxlength="12" />
+      </label>
+      <label style="margin-bottom:16px;width:100%;color:#fff;">買入籌碼
+        <input id="add-player-chips" type="number" min="1" max="999999" value="10000" style="width:100%;padding:6px 8px;margin-top:4px;border-radius:6px;border:none;outline:none;" />
+      </label>
+      <div style="display:flex;gap:12px;justify-content:center;width:100%;">
+        <button id="add-player-next" style="background:#ffd700;color:#222;padding:8px 18px;border:none;border-radius:6px;font-weight:bold;cursor:pointer;">下一位玩家</button>
+        <button id="add-player-exit" style="background:#444;color:#fff;padding:8px 18px;border:none;border-radius:6px;font-weight:bold;cursor:pointer;">完成</button>
+      </div>
+    </div>
+  </div>
+  <!-- 新增玩家按鈕 -->
+  <button id="show-add-player-btn" style="position:fixed;bottom:32px;right:32px;z-index:50;background:#ffd700;color:#222;padding:14px 28px;font-size:1.2em;border:none;border-radius:12px;box-shadow:0 0 12px #0008;cursor:pointer;">新增玩家</button>
+  <script src="main.js"></script>
+</body>
+</html> 
