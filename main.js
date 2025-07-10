@@ -13,17 +13,117 @@ let langData = {};  // 當前語言資料
 // 切換語言並更新所有UI（包含所有動態文字）
 function setLang(newLang) {
   lang = newLang;
-  // 讀取對應語言檔
-  fetch(LANG_FILES[lang])
-    .then(res => res.json())
+  
+  // 定義語言資料（備用方案）
+  const fallbackLangData = {
+    'zh-TW': {
+      title: '德州撲克籌碼管理',
+      pot: '底池',
+      player: '玩家',
+      add_player: '新增玩家',
+      fold: '棄牌',
+      check: '過牌',
+      call: '跟注',
+      bet: '下注',
+      raise: '加注',
+      allin: 'All-in',
+      clear: '清除',
+      enter: '輸入',
+      undo: '回上一步',
+      random_bb: '隨機選BB',
+      export_history: '匯出歷史',
+      bb: '大盲',
+      sb: '小盲',
+      sit_out: '離席',
+      sit_in: '回座',
+      buy_in: '買入',
+      blackout: '已出局',
+      next_player: '下一位玩家',
+      done: '完成',
+      set_blind: '設定盲注',
+      player_name: '玩家名稱',
+      chips: '買入籌碼',
+      sidepot: '邊池',
+      max_players: '最少2人，最多21人',
+      error_overbet: '下注金額超過可用籌碼！'
+    },
+    'en': {
+      title: 'Poker Chip Manager',
+      pot: 'Pot',
+      player: 'Player',
+      add_player: 'Add Player',
+      fold: 'Fold',
+      check: 'Check',
+      call: 'Call',
+      bet: 'Bet',
+      raise: 'Raise',
+      allin: 'All-in',
+      clear: 'Clear',
+      enter: 'Enter',
+      undo: 'Undo',
+      random_bb: 'Random BB',
+      export_history: 'Export History',
+      bb: 'Big Blind',
+      sb: 'Small Blind',
+      sit_out: 'Sit Out',
+      sit_in: 'Sit In',
+      buy_in: 'Buy-in',
+      blackout: 'Out',
+      next_player: 'Next Player',
+      done: 'Done',
+      set_blind: 'Set Blind',
+      player_name: 'Player Name',
+      chips: 'Chips',
+      sidepot: 'Sidepot',
+      max_players: 'Min 2, Max 21',
+      error_overbet: 'Bet exceeds available chips!'
+    }
+  };
+  
+  // 嘗試載入外部JSON檔，如果失敗則使用內建資料
+  return fetch(LANG_FILES[lang])
+    .then(res => {
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+      return res.json();
+    })
     .then(data => {
       langData = data;
-      // 依新語言更新所有UI
-      updateUIText(); // 更新所有UI文字
-      renderPlayers(); // 重新渲染玩家
-      updatePotDisplay(); // 更新底池顯示
-      updateNumpadDisplay(); // 更新數字鍵盤顯示
+      updateUIAndRender();
+      return data;
+    })
+    .catch(error => {
+      // 使用內建的語言資料
+      langData = fallbackLangData[lang] || fallbackLangData['zh-TW'];
+      updateUIAndRender();
+      return langData;
     });
+}
+
+// 抽取UI更新邏輯到單獨函數
+function updateUIAndRender() {
+  updateUIText(); // 更新所有UI文字
+  renderPlayers(); // 重新渲染玩家
+  updatePotDisplay(); // 更新底池顯示
+  updateNumpadDisplay(); // 更新數字鍵盤顯示
+  updateLanguageButtons(); // 更新語言按鈕樣式
+}
+
+// 更新語言按鈕的視覺狀態
+function updateLanguageButtons() {
+  document.querySelectorAll('#language-switcher button').forEach(btn => {
+    const btnLang = btn.getAttribute('data-lang');
+    if (btnLang === lang) {
+      btn.style.backgroundColor = '#ffd700';
+      btn.style.color = '#222';
+      btn.style.fontWeight = 'bold';
+    } else {
+      btn.style.backgroundColor = '#444';
+      btn.style.color = '#fff';
+      btn.style.fontWeight = 'normal';
+    }
+  });
 }
 
 // 更新UI文字（標題、按鈕等）
@@ -45,16 +145,23 @@ function updateUIText() {
   document.getElementById('undo-btn').textContent = langData.undo;
   document.getElementById('random-bb-btn').textContent = langData.random_bb;
   document.getElementById('export-history-btn').textContent = langData.export_history;
-  // 盲注設定按鈕
-  const setBlindBtn = document.getElementById('set-blind-btn');
-  if (setBlindBtn) setBlindBtn.textContent = langData.set_blind || '設定盲注';
+  // 新增玩家按鈕
+  const addPlayerBtn = document.getElementById('show-add-player-btn');
+  if (addPlayerBtn) addPlayerBtn.textContent = langData.add_player || '新增玩家';
+  // 創建或更新盲注設定按鈕
+  createSetBlindButton();
+  // 更新新增玩家跳出盒子的文字
+  const modalTitle = document.querySelector('#add-player-modal h2');
+  if (modalTitle) modalTitle.textContent = langData.add_player || '新增玩家';
+  const nameLabel = document.querySelector('#add-player-modal label');
+  if (nameLabel) nameLabel.childNodes[0].textContent = langData.player_name || '玩家名稱';
+  const chipsLabel = document.querySelectorAll('#add-player-modal label')[1];
+  if (chipsLabel) chipsLabel.childNodes[0].textContent = langData.chips || '買入籌碼';
+  const nextBtn = document.getElementById('add-player-next');
+  if (nextBtn) nextBtn.textContent = langData.next_player || '下一位玩家';
+  const exitBtn = document.getElementById('add-player-exit');
+  if (exitBtn) exitBtn.textContent = langData.done || '完成';
 }
-
-document.querySelectorAll('#language-switcher button').forEach(btn => {
-  btn.addEventListener('click', e => {
-    setLang(btn.getAttribute('data-lang'));
-  });
-});
 
 // ===== 玩家資料結構與管理 =====
 const MAX_PLAYERS = 21; // 玩家上限
@@ -141,23 +248,32 @@ function renderPlayers() {
     const angle = (2 * Math.PI * i) / n - Math.PI/2;
     const x = centerX + radius * Math.cos(angle);
     const y = centerY + radius * Math.sin(angle);
+    
+    // 創建玩家元素
+    const playerDiv = document.createElement('div');
+    playerDiv.className = 'player-seat';
+    playerDiv.style.position = 'absolute';
+    playerDiv.style.left = x + '%';
+    playerDiv.style.top = y + '%';
+    playerDiv.style.transform = 'translate(-50%, -50%)';
+    
     // 不再顯示圓形籌碼，改用方塊顯示資訊
     playerDiv.innerHTML = `
-      <div class=\"block-player-info${i === currentPlayer ? ' block-current' : ''}\">
-        <div class=\"player-chipinfo-name\">${p.name}</div>
-        <div class=\"player-chipinfo-current\">Current: ${p.lastBet || 0}</div>
-        <div class=\"player-chipinfo-total\">Total: ${p.chips}</div>
-        ${p.isBB ? `<span class=\"player-bb\">${langData.bb||'BB'}</span>` : ''}
-        ${p.isSB ? `<span class=\"player-sb\">${langData.sb||'SB'}</span>` : ''}
-        ${p.status==='sitout'?`<span class=\"player-sitout\">${langData.sit_out||'離席'}</span>`:''}
-        ${p.status==='out'&&p.chips===0?`<span class=\"player-out\">${langData.blackout||'已出局'}</span>`:''}
-        ${p.status==='allin'?`<span class=\"player-allin\">ALL-IN</span>`:''}
+      <div class="block-player-info${i === currentPlayer ? ' block-current' : ''}">
+        <div class="player-chipinfo-name">${p.name}</div>
+        <div class="player-chipinfo-current">Current: ${p.lastBet || 0}</div>
+        <div class="player-chipinfo-total">Total: ${p.chips}</div>
+        ${p.isBB ? `<span class="player-bb">${langData.bb||'BB'}</span>` : ''}
+        ${p.isSB ? `<span class="player-sb">${langData.sb||'SB'}</span>` : ''}
+        ${p.status==='sitout'?`<span class="player-sitout">${langData.sit_out||'離席'}</span>`:''}
+        ${p.status==='out'&&p.chips===0?`<span class="player-out">${langData.blackout||'已出局'}</span>`:''}
+        ${p.status==='allin'?`<span class="player-allin">ALL-IN</span>`:''}
       </div>
-      <div class=\"player-actions-inline\" style=\"display:${selectedPlayer===i?'block':'none'}\">
-        <button onclick=\"removePlayer(${i})\">-</button>
-        <button onclick=\"sitOutPlayer(${i})\">${langData.sit_out||'離席'}</button>
-        <button onclick=\"sitInPlayer(${i})\">${langData.sit_in||'回座'}</button>
-        <button onclick=\"rebuyPlayer(${i}, 1000)\">${langData.buy_in||'買入'}</button>
+      <div class="player-actions-inline" style="display:${selectedPlayer===i?'block':'none'}">
+        <button onclick="removePlayer(${i})">-</button>
+        <button onclick="sitOutPlayer(${i})">${langData.sit_out||'離席'}</button>
+        <button onclick="sitInPlayer(${i})">${langData.sit_in||'回座'}</button>
+        <button onclick="rebuyPlayer(${i}, 1000)">${langData.buy_in||'買入'}</button>
       </div>
     `;
     // 點擊玩家顯示操作（再次點擊取消）
@@ -487,12 +603,37 @@ function bindNumpad() {
 }
 
 window.addEventListener('DOMContentLoaded', () => {
-  // ... existing code ...
-  updatePotDisplay();
-  bindActionButtons();
-  bindNumpad();
-  updateNumpadDisplay();
-  startBettingRound();
+  // 設定語言切換按鈕事件監聽器
+  const langButtons = document.querySelectorAll('#language-switcher button');
+  
+  langButtons.forEach((btn) => {
+    btn.addEventListener('click', e => {
+      e.preventDefault(); // 防止預設行為
+      setLang(btn.getAttribute('data-lang'));
+    });
+  });
+  
+  // 初始化語言系統並等待載入完成
+  setLang('zh-TW').then(() => {
+    // 語言載入完成後再添加預設玩家
+    addPlayer('Alice', 10000);
+    addPlayer('Bob', 10000);
+    addPlayer('Charlie', 10000);
+    
+    // 初始化其他功能
+    updatePotDisplay();
+    bindActionButtons();
+    bindNumpad();
+    updateNumpadDisplay();
+    startBettingRound();
+    
+    // 綁定其他按鈕事件
+    document.getElementById('random-bb-btn').onclick = randomizeBB;
+    document.getElementById('undo-btn').onclick = undo;
+    document.getElementById('export-history-btn').onclick = exportHistory;
+  });
+  
+  // ...existing code...
   // ===== 新增玩家跳出盒子互動（修正版，保證DOM已渲染） =====
   const showAddPlayerBtn = document.getElementById('show-add-player-btn');
   const addPlayerModal = document.getElementById('add-player-modal');
@@ -560,7 +701,17 @@ function randomizeBB() {
   renderPlayers();
 }
 
-document.getElementById('random-bb-btn').onclick = randomizeBB;
+// 創建設定盲注按鈕
+function createSetBlindButton() {
+  // 先檢查按鈕是否已存在，避免重複創建
+  if (!document.getElementById('set-blind-btn')) {
+    document.getElementById('undo-btn').insertAdjacentHTML('beforebegin', `<button id="set-blind-btn">${langData.set_blind||'設定盲注'}</button>`);
+    document.getElementById('set-blind-btn').onclick = setBlindPrompt;
+  } else {
+    // 如果按鈕已存在，只更新文字
+    document.getElementById('set-blind-btn').textContent = langData.set_blind || '設定盲注';
+  }
+}
 
 // 盲注/買入設定UI（簡單prompt，可改為彈窗或表單）
 function setBlindPrompt() {
@@ -570,9 +721,6 @@ function setBlindPrompt() {
     setBlindAmounts(bb, sb);
   }
 }
-
-document.getElementById('undo-btn').insertAdjacentHTML('beforebegin', `<button id="set-blind-btn">${langData.set_blind||'設定盲注'}</button>`);
-document.getElementById('set-blind-btn').onclick = setBlindPrompt;
 
 // ===== 歷史紀錄、回復、匯出 =====
 let history = [];
@@ -606,8 +754,6 @@ function undo() {
   updatePotDisplay();
 }
 
-document.getElementById('undo-btn').onclick = undo;
-
 function exportHistory() {
   const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(history, null, 2));
   const dlAnchor = document.createElement('a');
@@ -617,8 +763,6 @@ function exportHistory() {
   dlAnchor.click();
   dlAnchor.remove();
 }
-
-document.getElementById('export-history-btn').onclick = exportHistory;
 
 // 在每次重要操作後自動存歷史
 function afterAction() {

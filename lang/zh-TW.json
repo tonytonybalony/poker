@@ -42,5 +42,7 @@
   "save": "儲存",
   "load": "載入",
   "blackout": "已出局",
-  "numpad": "數字鍵盤"
+  "numpad": "數字鍵盤",
+  "next_player": "下一位玩家",
+  "done": "完成"
 } 
