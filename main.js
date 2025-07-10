@@ -47,7 +47,9 @@ function setLang(newLang) {
       chips: '買入籌碼',
       sidepot: '邊池',
       max_players: '最少2人，最多21人',
-      error_overbet: '下注金額超過可用籌碼！'
+      error_overbet: '下注金額超過可用籌碼！',
+      current: '本輪',
+      total: '總計'
     },
     'en': {
       title: 'Poker Chip Manager',
@@ -78,7 +80,9 @@ function setLang(newLang) {
       chips: 'Chips',
       sidepot: 'Sidepot',
       max_players: 'Min 2, Max 21',
-      error_overbet: 'Bet exceeds available chips!'
+      error_overbet: 'Bet exceeds available chips!',
+      current: 'Current',
+      total: 'Total'
     }
   };
   
@@ -194,7 +198,7 @@ function addPlayer(name, chips) {
     return;
   }
   players.push(createPlayer(name, chips));
-  renderPlayers();
+  renderPlayers(true); // 強制完整重新渲染，因為玩家數量改變
 }
 
 // 插入玩家（指定位置）
@@ -204,7 +208,7 @@ function insertPlayer(index, name, chips) {
     return;
   }
   players.splice(index, 0, createPlayer(name, chips));
-  renderPlayers();
+  renderPlayers(true); // 強制完整重新渲染，因為玩家數量改變
 }
 
 // 移除玩家（指定index）
@@ -214,25 +218,26 @@ function removePlayer(index) {
     return;
   }
   players.splice(index, 1);
-  renderPlayers();
+  selectedPlayer = null; // 重置選擇的玩家
+  renderPlayers(true); // 強制完整重新渲染，因為玩家數量改變
 }
 
 // 玩家離席（狀態設為sitout）
 function sitOutPlayer(index) {
   players[index].status = 'sitout';
-  renderPlayers();
+  updateSinglePlayer(index); // 只更新單個玩家
 }
 // 玩家回座（狀態設為active）
 function sitInPlayer(index) {
   players[index].status = 'active';
-  renderPlayers();
+  updateSinglePlayer(index); // 只更新單個玩家
 }
 // 玩家重買（補充籌碼，出局後可回到active）
 function rebuyPlayer(index, chips) {
   players[index].chips += chips;
   players[index].buyIns++;
   if (players[index].status === 'out') players[index].status = 'active';
-  renderPlayers();
+  updateSinglePlayer(index); // 只更新單個玩家
 }
 // 顯示錯誤訊息（可改為自訂動畫提示）
 function showError(msg) {
@@ -241,55 +246,92 @@ function showError(msg) {
 
 // ===== 玩家顯示於撲克桌周圍 =====
 let selectedPlayer = null; // 目前被點擊的玩家index
-// 依照玩家數量，將玩家分布於圓桌周圍
-function renderPlayers() {
+let lastPlayersCount = 0; // 追蹤玩家數量變化
+
+// 依照玩家數量，將玩家分布於圓桌周圍（優化版）
+function renderPlayers(forceFullRender = false) {
   const playersDiv = document.getElementById('players');
-  playersDiv.innerHTML = '';
   const n = players.length;
-  const centerX = 50, centerY = 50, radius = 48;
+  
+  // 如果玩家數量改變或強制重新渲染，則重新創建所有元素
+  if (n !== lastPlayersCount || forceFullRender) {
+    playersDiv.innerHTML = '';
+    lastPlayersCount = n;
+    
+    const centerX = 50, centerY = 50, radius = 48;
+    players.forEach((p, i) => {
+      // 計算座位圓周位置
+      const angle = (2 * Math.PI * i) / n - Math.PI/2;
+      const x = centerX + radius * Math.cos(angle);
+      const y = centerY + radius * Math.sin(angle);
+      
+      // 創建玩家元素
+      const playerDiv = document.createElement('div');
+      playerDiv.className = 'player-seat';
+      playerDiv.id = `player-seat-${i}`;
+      playerDiv.style.position = 'absolute';
+      playerDiv.style.left = x + '%';
+      playerDiv.style.top = y + '%';
+      playerDiv.style.transform = 'translate(-50%, -50%)';
+      playerDiv.dataset.playerIndex = i; // 儲存玩家索引
+      
+      // 點擊玩家顯示操作（再次點擊取消）
+      playerDiv.onclick = (e) => {
+        e.stopPropagation(); // 阻止事件冒泡
+        const clickedIndex = parseInt(e.currentTarget.dataset.playerIndex);
+        selectedPlayer = (selectedPlayer === clickedIndex ? null : clickedIndex); // 切換選取狀態
+        renderPlayers(); // 重新渲染選取狀態
+      };
+      
+      playersDiv.appendChild(playerDiv);
+    });
+  }
+  
+  // 更新每個玩家的內容（只更新內容，不重創DOM）
   players.forEach((p, i) => {
-    // 計算座位圓周位置
-    const angle = (2 * Math.PI * i) / n - Math.PI/2;
-    const x = centerX + radius * Math.cos(angle);
-    const y = centerY + radius * Math.sin(angle);
-    
-    // 創建玩家元素
-    const playerDiv = document.createElement('div');
-    playerDiv.className = 'player-seat';
-    playerDiv.style.position = 'absolute';
-    playerDiv.style.left = x + '%';
-    playerDiv.style.top = y + '%';
-    playerDiv.style.transform = 'translate(-50%, -50%)';
-    
-    // 不再顯示圓形籌碼，改用方塊顯示資訊
-    playerDiv.innerHTML = `
-      <div class="block-player-info${i === currentPlayer ? ' block-current' : ''}">
-        <div class="player-chipinfo-name">${p.name}</div>
-        <div class="player-chipinfo-current">Current: ${p.lastBet || 0}</div>
-        <div class="player-chipinfo-total">Total: ${p.chips}</div>
-        ${p.isBB ? `<span class="player-bb">${langData.bb||'BB'}</span>` : ''}
-        ${p.isSB ? `<span class="player-sb">${langData.sb||'SB'}</span>` : ''}
-        ${p.status==='sitout'?`<span class="player-sitout">${langData.sit_out||'離席'}</span>`:''}
-        ${p.status==='out'&&p.chips===0?`<span class="player-out">${langData.blackout||'已出局'}</span>`:''}
-        ${p.status==='allin'?`<span class="player-allin">ALL-IN</span>`:''}
-      </div>
-      <div class="player-actions-inline" style="display:${selectedPlayer===i?'block':'none'}">
-        <button onclick="removePlayer(${i})">-</button>
-        <button onclick="sitOutPlayer(${i})">${langData.sit_out||'離席'}</button>
-        <button onclick="sitInPlayer(${i})">${langData.sit_in||'回座'}</button>
-        <button onclick="rebuyPlayer(${i}, 1000)">${langData.buy_in||'買入'}</button>
-      </div>
-    `;
-    // 點擊玩家顯示操作（再次點擊取消）
-    playerDiv.onclick = (e) => {
-      e.stopPropagation(); // 阻止事件冒泡
-      selectedPlayer = (selectedPlayer === i ? null : i); // 切換選取狀態
-      renderPlayers(); // 重新渲染
-    };
-    playersDiv.appendChild(playerDiv);
+    updatePlayerElement(i);
   });
+  
   updateActionButtonState(); // 更新操作按鈕狀態
 }
+
+// 更新特定玩家（用於單個玩家狀態改變時）
+function updateSinglePlayer(playerIndex) {
+  if (playerIndex >= 0 && playerIndex < players.length) {
+    updatePlayerElement(playerIndex);
+    updateActionButtonState();
+  }
+}
+
+// 更新單個玩家元素的內容
+function updatePlayerElement(playerIndex) {
+  const playerDiv = document.getElementById(`player-seat-${playerIndex}`);
+  if (!playerDiv) return;
+  
+  const p = players[playerIndex];
+  if (!p) return;
+  
+  // 更新玩家資訊內容
+  playerDiv.innerHTML = `
+    <div class="block-player-info${playerIndex === currentPlayer ? ' block-current' : ''}">
+      <div class="player-chipinfo-name">${p.name}</div>
+      <div class="player-chipinfo-current">${langData.current || 'Current'}: ${p.lastBet || 0}</div>
+      <div class="player-chipinfo-total">${langData.total || 'Total'}: ${p.chips}</div>
+      ${p.isBB ? `<span class="player-bb">${langData.bb||'BB'}</span>` : ''}
+      ${p.isSB ? `<span class="player-sb">${langData.sb||'SB'}</span>` : ''}
+      ${p.status==='sitout'?`<span class="player-sitout">${langData.sit_out||'離席'}</span>`:''}
+      ${p.status==='out'&&p.chips===0?`<span class="player-out">${langData.blackout||'已出局'}</span>`:''}
+      ${p.status==='allin'?`<span class="player-allin">ALL-IN</span>`:''}
+    </div>
+    <div class="player-actions-inline" style="display:${selectedPlayer===playerIndex?'block':'none'}">
+      <button onclick="removePlayer(${playerIndex})">-</button>
+      <button onclick="sitOutPlayer(${playerIndex})">${langData.sit_out||'離席'}</button>
+      <button onclick="sitInPlayer(${playerIndex})">${langData.sit_in||'回座'}</button>
+      <button onclick="rebuyPlayer(${playerIndex}, 1000)">${langData.buy_in||'買入'}</button>
+    </div>
+  `;
+}
+
 // 點擊桌面空白處時取消選取
 window.addEventListener('click', () => {
   if (selectedPlayer !== null) {
@@ -378,12 +420,18 @@ function enterBetInput() {
 
 function nextPlayer() {
   if (players.length < 2) return;
+  let oldPlayer = currentPlayer;
   let tries = 0;
   do {
     currentPlayer = (currentPlayer + 1) % players.length;
     tries++;
   } while ((players[currentPlayer].status !== 'active') && tries < players.length);
-  renderPlayers();
+  
+  // 只更新相關的玩家
+  if (oldPlayer !== currentPlayer) {
+    updateSinglePlayer(oldPlayer); // 更新之前的current player
+    updateSinglePlayer(currentPlayer); // 更新新的current player
+  }
 }
 
 // ===== 撲克標準下注圈邏輯 =====
@@ -398,8 +446,14 @@ function startBettingRound() {
   firstToAct = getFirstActivePlayer();
   lastRaiser = null;
   lastToAct = null;
+  let oldPlayer = currentPlayer;
   currentPlayer = firstToAct;
-  renderPlayers();
+  
+  // 只更新相關的玩家
+  if (oldPlayer !== currentPlayer) {
+    updateSinglePlayer(oldPlayer);
+    updateSinglePlayer(currentPlayer);
+  }
 }
 
 function getFirstActivePlayer() {
@@ -440,8 +494,14 @@ function onBettingRoundEnd() {
 }
 
 function nextPlayerBetting() {
+  let oldPlayer = currentPlayer;
   currentPlayer = getNextActivePlayer(currentPlayer);
-  renderPlayers();
+  
+  // 只更新相關的玩家
+  if (oldPlayer !== currentPlayer) {
+    updateSinglePlayer(oldPlayer);
+    updateSinglePlayer(currentPlayer);
+  }
 }
 
 function getMaxBet() {
@@ -508,7 +568,7 @@ function playerBet(index, amount, isRaise = false) {
     }
   }
   p.lastBet = (p.lastBet || 0) + amount;
-  renderPlayers();
+  updateSinglePlayer(index); // 只更新當前玩家
   calculateSidepots();
   updatePotDisplay();
   afterAction();
@@ -534,7 +594,7 @@ function playerAllIn(index) {
   }
   playerBet(index, p.chips);
   p.status = 'allin';
-  renderPlayers();
+  updateSinglePlayer(index); // 只更新當前玩家
   calculateSidepots();
   updatePotDisplay();
   afterAction();
@@ -548,7 +608,7 @@ function playerFold(index) {
   const p = players[index];
   if (p.status !== 'active') return;
   p.status = 'out';
-  renderPlayers();
+  updateSinglePlayer(index); // 只更新當前玩家
   afterAction();
   nextPlayerBetting();
   if (isBettingRoundOver()) {
@@ -691,7 +751,7 @@ let sbAmount = 50;
 function setBlindAmounts(bb, sb) {
   bbAmount = bb;
   sbAmount = sb;
-  renderPlayers();
+  renderPlayers(); // 盲注金額變化可能影響顯示
 }
 
 function randomizeBB() {
@@ -704,7 +764,9 @@ function randomizeBB() {
   // SB為BB的下一位
   const sbIndex = (bbIndex + 1) % players.length;
   players[sbIndex].isSB = true;
-  renderPlayers();
+  
+  // 只更新受影響的玩家
+  renderPlayers(); // 由於BB/SB可能影響多個玩家，保持完整渲染
 }
 
 // 創建設定盲注按鈕
@@ -756,7 +818,7 @@ function undo() {
   pot = prev.pot;
   currentBet = prev.currentBet;
   sidepots = JSON.parse(JSON.stringify(prev.sidepots));
-  renderPlayers();
+  renderPlayers(true); // 強制完整重新渲染，因為狀態完全改變
   updatePotDisplay();
 }
 
