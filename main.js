@@ -1,4 +1,4 @@
-// main.js
+// main.js  This Player Statictic Branch
 // 德州撲克籌碼管理主程式
 
 // ===== 多語系支援 =====
