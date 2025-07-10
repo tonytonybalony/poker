@@ -11,10 +11,12 @@ let lang = 'zh-TW'; // 當前語言
 let langData = {};  // 當前語言資料
 
 // 切換語言並更新所有UI（包含所有動態文字）
+// checked
 function setLang(newLang) {
   lang = newLang;
   
   // 定義語言資料（備用方案）
+  // checked
   const fallbackLangData = {
     'zh-TW': {
       title: '德州撲克籌碼管理',
@@ -103,14 +105,15 @@ function setLang(newLang) {
 
 // 抽取UI更新邏輯到單獨函數
 function updateUIAndRender() {
-  updateUIText(); // 更新所有UI文字
+  updateUIText(); // 更新所有UI文字  checked
   renderPlayers(); // 重新渲染玩家
-  updatePotDisplay(); // 更新底池顯示
+  updatePotDisplay(); // 更新底池顯示  checked
   updateNumpadDisplay(); // 更新數字鍵盤顯示
-  updateLanguageButtons(); // 更新語言按鈕樣式
+  updateLanguageButtons(); // 更新語言按鈕樣式  checked
 }
 
 // 更新語言按鈕的視覺狀態
+// checked
 function updateLanguageButtons() {
   document.querySelectorAll('#language-switcher button').forEach(btn => {
     const btnLang = btn.getAttribute('data-lang');
@@ -127,6 +130,7 @@ function updateLanguageButtons() {
 }
 
 // 更新UI文字（標題、按鈕等）
+// checked
 function updateUIText() {
   // 標題與底池
   document.title = langData.title || 'Poker Chip Manager';
@@ -164,8 +168,8 @@ function updateUIText() {
 }
 
 // ===== 玩家資料結構與管理 =====
-const MAX_PLAYERS = 21; // 玩家上限
 const MIN_PLAYERS = 2;  // 玩家下限
+const MAX_PLAYERS = 21; // 玩家上限
 let players = []; // 玩家陣列
 let playerIdSeed = 1; // 玩家ID自增
 
@@ -324,6 +328,8 @@ function calculateSidepots() {
   sidepots = pots;
 }
 
+// 更新底池顯示（包含sidepot）
+// checked
 function updatePotDisplay() {
   document.getElementById('pot-amount').textContent = pot;
   // 顯示sidepot
