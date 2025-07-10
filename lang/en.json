@@ -42,5 +42,7 @@
   "save": "Save",
   "load": "Load",
   "blackout": "Out",
-  "numpad": "Numpad"
+  "numpad": "Numpad",
+  "next_player": "Next Player",
+  "done": "Done"
 } 
