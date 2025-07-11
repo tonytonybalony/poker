@@ -44,5 +44,9 @@
   "blackout": "已出局",
   "numpad": "數字鍵盤",
   "next_player": "下一位玩家",
-  "done": "完成"
+  "done": "完成",
+  "current": "本輪",
+  "total": "總計",
+  "next_hand": "下一手",
+  "set_bb_position": "設定盲注位置"
 } 

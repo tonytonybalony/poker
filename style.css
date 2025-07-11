@@ -175,6 +175,12 @@ body {
     height: 60px;
     font-size: 0.9em;
   }
+  
+  /* Enhanced BB/SB medium screen styling */
+  .player-bb, .player-sb {
+    padding: 3px 6px;
+    font-size: 0.8em;
+  }
 }
 @media (max-width: 600px) {
   #poker-table {
@@ -206,6 +212,37 @@ body {
   }
   .player-seat {
     font-size: 0.7em;
+  }
+  
+  /* Enhanced BB/SB mobile styling */
+  .player-bb, .player-sb {
+    padding: 2px 4px;
+    font-size: 0.7em;
+    border-width: 1px;
+    border-radius: 8px;
+  }
+  
+  /* Reduce animation intensity on mobile */
+  @keyframes bb-pulse {
+    0%, 100% { 
+      box-shadow: 0 1px 4px rgba(255, 215, 0, 0.4), 0 0 8px rgba(255, 215, 0, 0.2);
+      transform: scale(1);
+    }
+    50% { 
+      box-shadow: 0 1px 6px rgba(255, 215, 0, 0.6), 0 0 12px rgba(255, 215, 0, 0.4);
+      transform: scale(1.02);
+    }
+  }
+  
+  @keyframes sb-pulse {
+    0%, 100% { 
+      box-shadow: 0 1px 4px rgba(135, 206, 235, 0.4), 0 0 8px rgba(135, 206, 235, 0.2);
+      transform: scale(1);
+    }
+    50% { 
+      box-shadow: 0 1px 6px rgba(135, 206, 235, 0.6), 0 0 12px rgba(135, 206, 235, 0.4);
+      transform: scale(1.02);
+    }
   }
 }
 
@@ -314,21 +351,82 @@ body {
   background: #444;
   border-color: #888;
 }
+/* Enhanced BB/SB Visual Indicators */
 .player-bb {
-  background: #ffd700; /* BB標記金色 */
-  color: #222;
-  border-radius: 8px;
-  padding: 2px 6px;
-  font-size: 0.9em;
+  background: linear-gradient(135deg, #ffd700, #ffeb3b); /* Gradient gold background */
+  color: #1a1a1a;
+  border: 2px solid #ff8f00;
+  border-radius: 12px;
+  padding: 4px 8px;
+  font-size: 0.85em;
+  font-weight: bold;
   margin: 2px;
+  box-shadow: 0 2px 6px rgba(255, 215, 0, 0.5), 0 0 12px rgba(255, 215, 0, 0.3);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  animation: bb-pulse 2s infinite;
+  position: relative;
+  z-index: 10;
 }
+
 .player-sb {
-  background: #b0e0e6; /* SB標記藍色 */
-  color: #222;
-  border-radius: 8px;
-  padding: 2px 6px;
-  font-size: 0.9em;
+  background: linear-gradient(135deg, #87ceeb, #4fc3f7); /* Gradient blue background */
+  color: #1a1a1a;
+  border: 2px solid #0277bd;
+  border-radius: 12px;
+  padding: 4px 8px;
+  font-size: 0.85em;
+  font-weight: bold;
   margin: 2px;
+  box-shadow: 0 2px 6px rgba(135, 206, 235, 0.5), 0 0 12px rgba(135, 206, 235, 0.3);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  animation: sb-pulse 2s infinite;
+  position: relative;
+  z-index: 10;
+}
+
+/* Pulsing animations for BB/SB */
+@keyframes bb-pulse {
+  0%, 100% { 
+    box-shadow: 0 2px 6px rgba(255, 215, 0, 0.5), 0 0 12px rgba(255, 215, 0, 0.3);
+    transform: scale(1);
+  }
+  50% { 
+    box-shadow: 0 2px 8px rgba(255, 215, 0, 0.7), 0 0 16px rgba(255, 215, 0, 0.5);
+    transform: scale(1.05);
+  }
+}
+
+@keyframes sb-pulse {
+  0%, 100% { 
+    box-shadow: 0 2px 6px rgba(135, 206, 235, 0.5), 0 0 12px rgba(135, 206, 235, 0.3);
+    transform: scale(1);
+  }
+  50% { 
+    box-shadow: 0 2px 8px rgba(135, 206, 235, 0.7), 0 0 16px rgba(135, 206, 235, 0.5);
+    transform: scale(1.05);
+  }
+}
+
+/* Special styling for player chips when they are BB/SB */
+.player-chip.has-bb {
+  border-color: #ffd700 !important;
+  box-shadow: 0 0 16px rgba(255, 215, 0, 0.4), 0 0 8px #000a;
+}
+
+.player-chip.has-sb {
+  border-color: #87ceeb !important;
+  box-shadow: 0 0 16px rgba(135, 206, 235, 0.4), 0 0 8px #000a;
+}
+
+/* Enhanced block player info for BB/SB */
+.block-player-info.has-bb {
+  border-color: #ffd700 !important;
+  box-shadow: 0 0 16px rgba(255, 215, 0, 0.4), 0 0 8px #000a;
+}
+
+.block-player-info.has-sb {
+  border-color: #87ceeb !important;
+  box-shadow: 0 0 16px rgba(135, 206, 235, 0.4), 0 0 8px #000a;
 }
 .player-sitout, .player-out {
   display: block;

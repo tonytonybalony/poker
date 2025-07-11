@@ -311,9 +311,15 @@ function updatePlayerElement(playerIndex) {
   const p = players[playerIndex];
   if (!p) return;
   
+  // Determine additional CSS classes for BB/SB styling
+  let blockClasses = 'block-player-info';
+  if (playerIndex === currentPlayer) blockClasses += ' block-current';
+  if (p.isBB) blockClasses += ' has-bb';
+  if (p.isSB) blockClasses += ' has-sb';
+  
   // 更新玩家資訊內容
   playerDiv.innerHTML = `
-    <div class="block-player-info${playerIndex === currentPlayer ? ' block-current' : ''}">
+    <div class="${blockClasses}">
       <div class="player-chipinfo-name">${p.name}</div>
       <div class="player-chipinfo-current">${langData.current || 'Current'}: ${p.lastBet || 0}</div>
       <div class="player-chipinfo-total">${langData.total || 'Total'}: ${p.chips}</div>
@@ -394,8 +400,17 @@ function setBetInput(val) {
 }
 
 function appendBetInput(num) {
-  if (betInput.length < 8) betInput += num;
-  updateNumpadDisplay();
+  if (betInput.length < 8) {
+    betInput += num;
+    updateNumpadDisplay();
+  }
+}
+
+function backspaceBetInput() {
+  if (betInput.length > 0) {
+    betInput = betInput.slice(0, -1);
+    updateNumpadDisplay();
+  }
 }
 
 function clearBetInput() {
@@ -404,7 +419,22 @@ function clearBetInput() {
 }
 
 function updateNumpadDisplay() {
-  document.getElementById('numpad-display').textContent = betInput;
+  const display = document.getElementById('numpad-display');
+  
+  if (!display) {
+    console.error('numpad-display element not found!');
+    return;
+  }
+  
+  if (betInput === '') {
+    display.textContent = '0';
+    display.style.color = '#888';
+  } else {
+    // Format number with commas for better readability
+    const formattedNumber = parseInt(betInput, 10).toLocaleString();
+    display.textContent = formattedNumber;
+    display.style.color = '#fff';
+  }
 }
 
 function enterBetInput() {
@@ -416,6 +446,7 @@ function enterBetInput() {
   }
   playerBet(currentPlayer, amount);
   betInput = '';
+  updateNumpadDisplay();
 }
 
 function nextPlayer() {
@@ -466,39 +497,63 @@ function getFirstActivePlayer() {
 function getNextActivePlayer(from) {
   let n = players.length;
   let idx = from;
+  let attempts = 0;
+  
   do {
     idx = (idx + 1) % n;
-    if (players[idx].status === 'active' && players[idx].chips > 0) return idx;
-  } while (idx !== from);
+    attempts++;
+    if (players[idx].status === 'active' && players[idx].chips > 0) {
+      return idx;
+    }
+  } while (attempts < n);
+  
+  // If no next active player found, return the original index
   return from;
 }
 
 function isBettingRoundOver() {
-  // 只剩一人有效玩家
-  let activeCount = players.filter(p => p.status === 'active' && p.chips > 0).length;
-  if (activeCount <= 1) return true;
-  // 沒有加注，且已回到起始玩家
-  if (lastRaiser === null && currentPlayer === firstToAct) return true;
-  // 有加注，且已回到最後加注者的下一位
+  // Count active players with chips
+  let activePlayers = players.filter(p => p.status === 'active' && p.chips > 0);
+  
+  // If only one or no active players left, round is over
+  if (activePlayers.length <= 1) return true;
+  
+  // If no one has raised and we're back to the first player, round is over
+  if (lastRaiser === null && currentPlayer === firstToAct) {
+    // Check if this is the very first action of the round
+    let anyBets = players.some(p => (p.lastBet || 0) > 0);
+    if (anyBets) return true;
+  }
+  
+  // If someone raised and we're back to the last raiser's next player, round is over
   if (lastRaiser !== null && currentPlayer === lastToAct) return true;
+  
   return false;
 }
 
 function onBettingRoundEnd() {
   bettingRoundActive = false;
-  // 若還有多於1位有效玩家，自動啟動新下注圈
-  let activeCount = players.filter(p => p.status === 'active' && p.chips > 0).length;
-  if (activeCount > 1) {
-    setTimeout(() => startBettingRound(), 500);
-  }
+  // Don't automatically start new rounds - let user control the flow
+  console.log('Betting round ended');
 }
 
 function nextPlayerBetting() {
   let oldPlayer = currentPlayer;
-  currentPlayer = getNextActivePlayer(currentPlayer);
+  let nextIdx = currentPlayer;
+  let attempts = 0;
   
-  // 只更新相關的玩家
-  if (oldPlayer !== currentPlayer) {
+  // Find next active player with chips
+  do {
+    nextIdx = (nextIdx + 1) % players.length;
+    attempts++;
+  } while (attempts < players.length && 
+           (players[nextIdx].status !== 'active' || players[nextIdx].chips === 0));
+  
+  // Only update if we found a different valid player
+  if (attempts < players.length && nextIdx !== oldPlayer) {
+    currentPlayer = nextIdx;
+    
+    // Update both old and new current player displays
     updateSinglePlayer(oldPlayer);
     updateSinglePlayer(currentPlayer);
   }
@@ -510,72 +565,75 @@ function getMaxBet() {
 
 function updateActionButtonState() {
   const p = players[currentPlayer];
+  if (!p) return;
+  
   const disable = (p.status !== 'active');
-  const isFirstToAct = (currentPlayer === firstToAct && lastRaiser === null && getMaxBet() === 0);
   const maxBet = getMaxBet();
   const playerBetAmt = p.lastBet || 0;
-  // bet: 只有第一位有效玩家且maxBet=0
-  document.getElementById('bet-btn').disabled = disable || !isFirstToAct;
-  // raise: 只有maxBet>0且玩家有籌碼
-  document.getElementById('raise-btn').disabled = disable || maxBet === 0;
-  // call: 只有maxBet>0且玩家尚未補齊
-  document.getElementById('call-btn').disabled = disable || maxBet === 0 || playerBetAmt >= maxBet;
-  // check: 只有maxBet=0（非第一位）或已補齊下注
-  document.getElementById('check-btn').disabled = disable || (!((maxBet === 0 && currentPlayer !== firstToAct) || (playerBetAmt === maxBet)));
-  // fold: 只有maxBet=0或已補齊下注時可fold（不能call時才能fold）
-  document.getElementById('fold-btn').disabled = disable || (maxBet > 0 && playerBetAmt < maxBet);
-  document.getElementById('allin-btn').disabled = disable || p.chips === 0;
+  const hasChips = p.chips > 0;
+  
+  // bet: can bet if player has chips and no one has bet yet, OR if it's the first action
+  document.getElementById('bet-btn').disabled = disable || !hasChips;
+  
+  // raise: can raise if someone has bet and player has chips
+  document.getElementById('raise-btn').disabled = disable || !hasChips;
+  
+  // call: can call if there's a bet to call and player hasn't matched it yet
+  document.getElementById('call-btn').disabled = disable || maxBet === 0 || playerBetAmt >= maxBet || !hasChips;
+  
+  // check: can check if no bet to call or player has already matched the bet
+  document.getElementById('check-btn').disabled = disable || (maxBet > 0 && playerBetAmt < maxBet);
+  
+  // fold: can always fold if active
+  document.getElementById('fold-btn').disabled = disable;
+  
+  // allin: can go all-in if has chips
+  document.getElementById('allin-btn').disabled = disable || !hasChips;
 }
 
 function playerBet(index, amount, isRaise = false) {
   const p = players[index];
   if (p.status !== 'active') return;
-  const isFirstToAct = (index === firstToAct && lastRaiser === null && getMaxBet() === 0);
   const maxBet = getMaxBet();
   amount = parseInt(amount, 10);
+  
   if (isNaN(amount) || amount <= 0) {
     showError('請輸入有效的下注金額');
     return;
   }
-  if (!isFirstToAct && !isRaise && maxBet > 0) {
-    // 不是第一位且不是raise，應該是call
-    playerCall(index);
-    return;
-  }
-  if (!isFirstToAct && !isRaise && maxBet === 0) {
-    showError('只有第一位玩家能下注，其他只能加注');
-    return;
-  }
+  
   if (amount > p.chips) {
     showError(langData.error_overbet || '下注金額超過可用籌碼！');
     return;
   }
+  
+  // If this is a raise, check that the amount is greater than max bet
   if (isRaise && amount <= maxBet) {
     showError('加注金額必須大於目前最高下注');
     return;
   }
-  if (isFirstToAct && amount <= 0) {
-    showError('下注金額需大於0');
-    return;
-  }
+  
+  // Deduct chips and add to pot
   p.chips -= amount;
   pot += amount;
-  if (isRaise || isFirstToAct) {
+  
+  // Update current bet if this is a new high
+  if (amount > maxBet) {
     currentBet = amount;
-    if (isRaise) {
-      lastRaiser = index;
-      lastToAct = getNextActivePlayer(index);
-    }
+    lastRaiser = index;
+    lastToAct = getNextActivePlayer(index);
   }
+  
+  // Update player's bet for this round
   p.lastBet = (p.lastBet || 0) + amount;
+  
   updateSinglePlayer(index); // 只更新當前玩家
   calculateSidepots();
   updatePotDisplay();
   afterAction();
+  
+  // ONLY advance to next player, don't check if round is over yet
   nextPlayerBetting();
-  if (isBettingRoundOver()) {
-    onBettingRoundEnd();
-  }
 }
 
 function playerRaise(index, amount) {
@@ -598,10 +656,6 @@ function playerAllIn(index) {
   calculateSidepots();
   updatePotDisplay();
   afterAction();
-  nextPlayerBetting();
-  if (isBettingRoundOver()) {
-    onBettingRoundEnd();
-  }
 }
 
 function playerFold(index) {
@@ -611,9 +665,6 @@ function playerFold(index) {
   updateSinglePlayer(index); // 只更新當前玩家
   afterAction();
   nextPlayerBetting();
-  if (isBettingRoundOver()) {
-    onBettingRoundEnd();
-  }
 }
 
 function playerCheck(index) {
@@ -624,9 +675,6 @@ function playerCheck(index) {
     return;
   }
   nextPlayerBetting();
-  if (isBettingRoundOver()) {
-    onBettingRoundEnd();
-  }
 }
 
 function playerCall(index) {
@@ -657,18 +705,69 @@ function bindActionButtons() {
 }
 
 function bindNumpad() {
-  document.querySelectorAll('#numpad button').forEach(btn => {
-    if (btn.id === 'numpad-clear') {
-      btn.onclick = () => { clearBetInput(); };
-    } else if (btn.id === 'numpad-enter') {
-      btn.onclick = () => { enterBetInput(); };
-    } else {
-      btn.onclick = () => { appendBetInput(btn.textContent); };
+  // Use event delegation on the parent numpad div
+  const numpadDiv = document.getElementById('numpad');
+  if (!numpadDiv) {
+    console.error('Numpad div not found!');
+    return;
+  }
+  
+  // Remove any existing event listeners
+  numpadDiv.onclick = null;
+  
+  // Add single event listener to parent
+  numpadDiv.onclick = (e) => {
+    if (e.target.tagName === 'BUTTON') {
+      e.preventDefault();
+      const btn = e.target;
+      const btnText = btn.textContent.trim();
+      
+      // Handle by ID first, then by text content
+      if (btn.id === 'numpad-clear') {
+        clearBetInput();
+      } else if (btn.id === 'numpad-enter') {
+        enterBetInput();
+      } else if (btnText >= '0' && btnText <= '9') {
+        appendBetInput(btnText);
+      } else if (btnText === '清除' || btnText === 'Clear') {
+        clearBetInput();
+      } else if (btnText === '輸入' || btnText === 'Enter') {
+        enterBetInput();
+      }
+    }
+  };
+}
+
+// Add keyboard support for numpad
+function bindKeyboardSupport() {
+  document.addEventListener('keydown', (e) => {
+    // Only handle numpad when no input field is focused
+    if (document.activeElement.tagName === 'INPUT') {
+      return;
+    }
+    
+    if (e.key >= '0' && e.key <= '9') {
+      appendBetInput(e.key);
+      e.preventDefault();
+    } else if (e.key === 'Backspace') {
+      backspaceBetInput();
+      e.preventDefault();
+    } else if (e.key === 'Delete' || e.key === 'Escape') {
+      clearBetInput();
+      e.preventDefault();
+    } else if (e.key === 'Enter') {
+      enterBetInput();
+      e.preventDefault();
     }
   });
 }
 
 window.addEventListener('DOMContentLoaded', () => {
+  // Initialize numpad display and bind events IMMEDIATELY
+  clearBetInput(); // Initialize numpad display
+  bindNumpad(); // Bind numpad events before language loads
+  bindKeyboardSupport(); // Add keyboard support
+  
   // 設定語言切換按鈕事件監聽器
   const langButtons = document.querySelectorAll('#language-switcher button');
   
@@ -689,8 +788,10 @@ window.addEventListener('DOMContentLoaded', () => {
     // 初始化其他功能
     updatePotDisplay();
     bindActionButtons();
+    
+    // Re-bind numpad after language loads (in case text changed)
     bindNumpad();
-    updateNumpadDisplay();
+    
     startBettingRound();
     
     // 綁定其他按鈕事件
@@ -769,6 +870,62 @@ function randomizeBB() {
   renderPlayers(); // 由於BB/SB可能影響多個玩家，保持完整渲染
 }
 
+// Set BB/SB positions based on current player (dealer button logic)
+function setBBSBFromCurrentPlayer() {
+  if (players.length < 2) return;
+  
+  // Clear all BB/SB
+  players.forEach(p => { p.isBB = false; p.isSB = false; });
+  
+  if (players.length === 2) {
+    // In heads-up play, current player is SB, next is BB
+    players[currentPlayer].isSB = true;
+    const bbIndex = (currentPlayer + 1) % players.length;
+    players[bbIndex].isBB = true;
+  } else {
+    // In multi-player, current player is dealer, next is SB, then BB
+    const sbIndex = (currentPlayer + 1) % players.length;
+    const bbIndex = (currentPlayer + 2) % players.length;
+    players[sbIndex].isSB = true;
+    players[bbIndex].isBB = true;
+  }
+  
+  renderPlayers(); // 重新渲染以顯示BB/SB
+}
+
+// Advance BB/SB positions (for next hand)
+function advanceBBSB() {
+  if (players.length < 2) return;
+  
+  // Find current BB position
+  let currentBBIndex = players.findIndex(p => p.isBB);
+  if (currentBBIndex === -1) {
+    // No BB set, use random
+    randomizeBB();
+    return;
+  }
+  
+  // Clear all BB/SB
+  players.forEach(p => { p.isBB = false; p.isSB = false; });
+  
+  // Move BB to next position
+  const newBBIndex = (currentBBIndex + 1) % players.length;
+  players[newBBIndex].isBB = true;
+  
+  // Set SB
+  if (players.length === 2) {
+    // In heads-up, new SB is the other player
+    const newSBIndex = (newBBIndex + 1) % players.length;
+    players[newSBIndex].isSB = true;
+  } else {
+    // In multi-player, SB is one position before BB
+    const newSBIndex = (newBBIndex - 1 + players.length) % players.length;
+    players[newSBIndex].isSB = true;
+  }
+  
+  renderPlayers();
+}
+
 // 創建設定盲注按鈕
 function createSetBlindButton() {
   // 先檢查按鈕是否已存在，避免重複創建
@@ -778,6 +935,22 @@ function createSetBlindButton() {
   } else {
     // 如果按鈕已存在，只更新文字
     document.getElementById('set-blind-btn').textContent = langData.set_blind || '設定盲注';
+  }
+  
+  // Add advance BB/SB button
+  if (!document.getElementById('advance-bb-btn')) {
+    document.getElementById('random-bb-btn').insertAdjacentHTML('afterend', `<button id="advance-bb-btn">下一手</button>`);
+    document.getElementById('advance-bb-btn').onclick = advanceBBSB;
+  } else {
+    document.getElementById('advance-bb-btn').textContent = langData.next_hand || '下一手';
+  }
+  
+  // Add set BB/SB from current player button
+  if (!document.getElementById('set-bb-current-btn')) {
+    document.getElementById('random-bb-btn').insertAdjacentHTML('afterend', `<button id="set-bb-current-btn">設定盲注位置</button>`);
+    document.getElementById('set-bb-current-btn').onclick = setBBSBFromCurrentPlayer;
+  } else {
+    document.getElementById('set-bb-current-btn').textContent = langData.set_bb_position || '設定盲注位置';
   }
 }
 

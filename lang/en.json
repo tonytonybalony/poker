@@ -44,5 +44,9 @@
   "blackout": "Out",
   "numpad": "Numpad",
   "next_player": "Next Player",
-  "done": "Done"
+  "done": "Done",
+  "current": "Current",
+  "total": "Total",
+  "next_hand": "Next Hand",
+  "set_bb_position": "Set BB Position"
 } 
